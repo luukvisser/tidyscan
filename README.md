@@ -20,11 +20,6 @@ network printers to a folder), and usable for any scanned pages.
 
 ## Install
 
-> Not released yet: until the first release there is no PyPI package and no
-> models release. Install from the repository
-> (`pip install 'tidyscan[ocr] @ git+https://github.com/luukvisser/tidyscan'`)
-> and make the PaddleOCR models with `tools/models.py` ([docs/models.md](docs/models.md)).
-
     pip install tidyscan                # pages to PDF only
     pip install 'tidyscan[straighten]'  # plus Pillow: turning upright and straightening
     pip install 'tidyscan[ocr]'         # plus OCRmyPDF: the text layer
