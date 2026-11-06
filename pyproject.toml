@@ -1,0 +1,73 @@
+[build-system]
+requires = ["flit_core==3.12.0"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "tidyscan"
+dynamic = ["version", "description"]
+readme = "README.md"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Luuk Visser" }]
+keywords = ["scan", "deskew", "orientation", "pdf", "ocr", "tesseract", "paddleocr"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Multimedia :: Graphics :: Graphics Conversion",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+dependencies = []
+
+[project.optional-dependencies]
+straighten = ["Pillow>=10"]
+ocr = ["Pillow>=10", "ocrmypdf>=16"]
+# PaddleOCR on OpenVINO (CPU) as the OCR engine; the models are separate files (see README)
+paddle = ["Pillow>=10", "ocrmypdf>=16,<18", "rapidocr>=3.10,<4", "openvino>=2025.1"]
+
+[project.urls]
+Source = "https://github.com/luukvisser/tidyscan"
+Issues = "https://github.com/luukvisser/tidyscan/issues"
+Changelog = "https://github.com/luukvisser/tidyscan/blob/main/CHANGELOG.md"
+
+[project.scripts]
+tidyscan = "tidyscan.__main__:main"
+
+[tool.flit.sdist]
+include = ["CHANGELOG.md", "tests/", "tools/"]
+
+[dependency-groups]
+# Lint, type check and the tests that need no Tesseract; `uv sync` installs these.
+# OCRmyPDF here so ty checks the plugin against its API, and its tests run.
+dev = ["ruff==0.17.3", "ty==0.0.95", "Pillow>=10", "ocrmypdf>=16,<18"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "ANN", "TC", "FA"]
+
+[tool.ruff.lint.per-file-ignores]
+# The benchmarks (not part of the package or its tests): long report lines, helpers without annotations
+"tests/eval_*.py" = ["E501", "E702", "ANN001", "ANN202"]
+
+[tool.ty.terminal]
+# warnings (e.g. deprecated APIs) fail the check too
+error-on-warning = true
+
+[tool.ty.rules]
+# on top of ty's defaults: no bare generics (missing-override-decorator needs typing.override, 3.12+)
+missing-type-argument = "error"
+
+[tool.ty.src]
+# The benchmarks run in their own image (tests/eval_deskew.Dockerfile) with libraries the package does
+# not depend on (OpenCV, numpy, the other deskew tools); ruff still checks them.
+exclude = ["tests/eval_*.py"]
+
+[tool.ty.analysis]
+# rapidocr: the optional PaddleOCR runtime (with OpenVINO and OpenCV, ~300 MB), imported only when
+# that engine is used; not worth installing just to type check two imports.
+# yaml: a build-time dependency of tools/models.py only, pinned in tools/convert-requirements.txt.
+allowed-unresolved-imports = ["rapidocr", "yaml"]

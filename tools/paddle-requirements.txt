@@ -1,0 +1,8 @@
+# The PaddleOCR runtime for the full image (CPython 3.13 x86_64, Debian trixie), wheels from PyPI.
+# Installed without dependencies: numpy, Pillow, shapely, pyclipper, PyYAML, omegaconf, tqdm,
+# requests, colorlog and six come from Debian. Not Debian's python3-opencv: it pulls in Qt, VTK,
+# GDAL and FFmpeg (+929 MB in trixie); the headless wheel bundles only what OpenCV needs.
+# openvino-telemetry (an openvino dependency used only by its conversion tools) is left out.
+openvino==2026.4.1 --hash=sha256:a9b637846c579d7b81b17b6585e0c7b1947574e8d13cf83d7307ce50cd2c352e
+rapidocr==3.10.0 --hash=sha256:2fc34e26cd0f48514804a94f8832283039c7334076bff60768b1fed9ad068050
+opencv-python-headless==4.14.0.94 --hash=sha256:211e581f5a4670acbbe08fff36a35e9946039d2eea28b80394632d036d1be527

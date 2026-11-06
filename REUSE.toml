@@ -1,0 +1,15 @@
+version = 1
+
+# Everything in this repository is Luuk Visser's, BSD-3-Clause, except the copy of Apache's
+# licence text that tools/models.py ships next to the PaddleOCR models (which are Apache-2.0).
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Luuk Visser"
+SPDX-License-Identifier = "BSD-3-Clause"
+
+[[annotations]]
+path = "tools/models-licence-apache-2.0.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "The Apache Software Foundation"
+SPDX-License-Identifier = "Apache-2.0"

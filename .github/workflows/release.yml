@@ -1,0 +1,41 @@
+name: Release
+
+# A tag v<version> builds the sdist and wheel and publishes them to PyPI through
+# trusted publishing (no token in the repository; configured on PyPI for this
+# workflow and the "pypi" environment). One job: the build is small, and the
+# job that holds id-token runs nothing but the checkout, uv build and uv publish.
+on:
+  push:
+    tags: ["v*"]
+
+# Read the repository; the publish job adds only the OIDC token PyPI needs.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write  # trusted publishing: PyPI accepts this workflow's OIDC token
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: false  # a release builds from a clean slate, not from a cache a PR could fill
+      - name: The tag matches the package version
+        run: |
+          version=$(PYTHONPATH=src python3 -c "import tidyscan; print(tidyscan.__version__)")
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME, package $version"; exit 1; }
+      - run: uv build
+      - run: uv publish --trusted-publishing always

@@ -1,0 +1,68 @@
+name: Models
+
+# A tag models-* (it must equal TAG in src/tidyscan/models.py) converts PaddleOCR's
+# PP-OCRv5 models with tools/models.py and publishes them as that release's assets, which
+# `tidyscan models fetch` downloads. tools/models.py stops when any input or output
+# differs from its pinned sha256, so a release can only ever hold those exact files.
+on:
+  push:
+    tags: ["models-*"]
+
+# Read the repository; only the publish job may create the release.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Convert and check the models
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # The same Python 3.12 image as the Dockerfile's models stage, pinned by digest
+    container: python:3.12-slim@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The tag is the one the package fetches
+        run: |
+          tag=$(python3 -I -c "import runpy; print(runpy.run_path('src/tidyscan/models.py')['TAG'])")
+          test "$tag" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME, models.py $tag"; exit 1; }
+      - name: The pinned converter
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends libgomp1
+          pip install --root-user-action=ignore --no-deps --require-hashes --no-cache-dir -r tools/convert-requirements.txt
+      - name: Convert, check, and make the release assets
+        run: python3 -I tools/models.py --release "$RUNNER_TEMP/models" dist
+      - run: cd dist && sha256sum -c SHA256SUMS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: models
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish the release
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write  # to create the release and upload its assets
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: models
+          path: dist/
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cd dist && sha256sum -c SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "PaddleOCR PP-OCRv5 models ($GITHUB_REF_NAME)" \
+            --notes "ONNX models for tidyscan's PaddleOCR engine; get them with \`tidyscan models fetch\`. Apache-2.0: LICENSE-Apache-2.0.txt and MODELS-NOTICE.txt." \
+            PP-OCRv5_mobile_det.onnx latin_PP-OCRv5_mobile_rec.onnx latin_PP-OCRv5_mobile_rec.keys.txt \
+            MODELS-NOTICE.txt LICENSE-Apache-2.0.txt SHA256SUMS

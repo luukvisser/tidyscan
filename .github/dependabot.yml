@@ -1,0 +1,26 @@
+# Weekly update PRs, one per ecosystem, for releases at least two weeks old.
+# Not covered: tools/convert-requirements.txt (hash-pinned build-time wheels for one
+# platform; update by hand) and the uv version setup-uv installs (`version:` in the workflows).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      actions:
+        patterns: ["*"]
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      python:
+        patterns: ["*"]
+    open-pull-requests-limit: 3

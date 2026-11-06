@@ -1,0 +1,9 @@
+# gitleaks: the default rules, plus one verified false positive.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "sha256 checksums of the model files in tools/models.py, not secrets"
+condition = "AND"
+paths = ['''(^|/)tools/models\.py$''']
+regexes = ['''^[0-9a-f]{64}$''']
