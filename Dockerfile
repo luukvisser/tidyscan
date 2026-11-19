@@ -111,6 +111,7 @@ ARG OCR_LANGS="eng nld deu fra"
 # SC2086: $OCR_LANGS is split into words on purpose.
 # hadolint ignore=DL3008,SC2086
 RUN apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
  && apt-get install -y --no-install-recommends python3 python3-pil python3-installer ocrmypdf \
       tesseract-ocr tesseract-ocr-osd $(for l in $OCR_LANGS; do echo tesseract-ocr-$l; done) \
  && rm -rf /var/lib/apt/lists/*
