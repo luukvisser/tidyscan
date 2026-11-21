@@ -104,7 +104,7 @@ ENTRYPOINT ["/opt/python/bin/python3", "-m", "tidyscan"]
 CMD ["watch", "/in", "/out"]
 
 # --- full: Tesseract and OCRmyPDF from Debian, with its security updates --------------------------
-FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS tesseract
+FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2 AS tesseract
 ARG OCR_LANGS="eng nld deu fra"
 # DL3008: Debian packages are not pinned by version; the base image is pinned by digest, and a
 # pinned Debian version disappears from the mirrors with its next security update.

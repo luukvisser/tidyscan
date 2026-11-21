@@ -7,7 +7,7 @@
 # ImageMagick 7, poppler-utils (pdftoppm, to render the source PDFs). PyPI, pinned with hashes:
 # deskew, jdeskew, rapid-orientation and their dependencies (tests/eval_deskew-requirements.txt).
 # tidyscan itself is not installed: eval_deskew.py runs the checkout it lives in (mount it).
-FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad
+FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
 # hadolint ignore=DL3008
 RUN apt-get update \
  && apt-get install -y --no-install-recommends python3 python3-venv ocrmypdf tesseract-ocr \
