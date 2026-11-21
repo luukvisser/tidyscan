@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Weekly, for advisories published since the last change: only the audits run (zizmor,
+  # gitleaks, the image and lock file scans); lint, tests and the package build are skipped.
+  schedule:
+    - cron: "17 5 * * 1"  # Mondays 05:17 UTC
 
 # Read the repository, nothing else; no job asks for more.
 permissions:
@@ -16,6 +20,7 @@ concurrency:
 jobs:
   lint:
     name: Lint (ruff, ty)
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -46,8 +51,25 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: docker run --rm -e GH_TOKEN -v "$PWD:/repo:ro" -w /repo ghcr.io/zizmorcore/zizmor:1.31.1@sha256:42d409dbb851d4c5d35a058cf042b828bea1e3f2884378c526eb0974780e18d9 --format=github .
 
+  containers:
+    name: Containers (hadolint)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: hadolint
+        run: |
+          for f in Dockerfile tests/eval_deskew.Dockerfile; do
+            echo "$f"
+            docker run --rm -i hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d hadolint - < "$f"
+          done
+
   reuse:
     name: Licensing (REUSE)
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -75,6 +97,7 @@ jobs:
   pdf-only:
     # The package without its extras: the PDF writer; everything else is skipped.
     name: Tests, PDF only (Python ${{ matrix.python }})
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
@@ -95,6 +118,7 @@ jobs:
   ocr:
     # Orientation, skew and OCR with Tesseract, on both OCRmyPDF versions the plugin supports.
     name: Tests, OCR (OCRmyPDF ${{ matrix.ocrmypdf }})
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
@@ -117,6 +141,7 @@ jobs:
 
   build:
     name: Build (wheel and sdist)
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -131,3 +156,73 @@ jobs:
         run: |
           wheel=$(ls "$PWD"/dist/*.whl)
           cd "$RUNNER_TEMP" && uv run --isolated --no-project --with "$wheel" python -c "import tidyscan; print(tidyscan.__version__)"
+
+  image:
+    # base and full; not paddle (about 1 GB, and its build converts the models: only on request).
+    name: Image (${{ matrix.image }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        include:
+          - image: base
+            target: base
+            platform: linux/amd64
+          # every RUN of base runs on the build platform; only the test below runs under QEMU
+          - image: base-arm64
+            target: base
+            platform: linux/arm64
+          - image: full
+            target: full
+            platform: linux/amd64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1  # v4.4.0
+        if: matrix.platform != 'linux/amd64'
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          platforms: ${{ matrix.platform }}
+          push: false
+          load: true
+          tags: ci-image:test
+      - name: Starts, and refuses a missing folder with a clear message
+        run: |
+          docker run --rm ci-image:test --version
+          out=$(docker run --rm ci-image:test watch /missing /out 2>&1) && exit 1
+          echo "$out" | grep -q "/missing is not a directory"
+      - name: Tesseract and OCRmyPDF are there
+        if: matrix.target == 'full'
+        run: >-
+          docker run --rm --entrypoint python3 ci-image:test -c
+          "from tidyscan import ocr, orientation, skew; assert ocr.available() and orientation.available() and skew.available()"
+      # Reported, not blocking: an advisory in a base image or a Debian package is a reason to
+      # look, not to stop every merge. Fixable HIGH and CRITICAL findings only.
+      - name: trivy image (fails only the weekly run)
+        if: matrix.platform == 'linux/amd64'
+        continue-on-error: ${{ github.event_name != 'schedule' }}  # reports on push/PR; the weekly run fails so GitHub mails
+        run: |
+          docker save -o "$RUNNER_TEMP/image.tar" ci-image:test
+          docker run --rm -v "$RUNNER_TEMP:/work" aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb \
+            image --cache-dir /work/trivy --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL \
+            --exit-code 1 --input /work/image.tar
+
+  # The locked Python packages (uv.lock, extras included), reported like the image scan.
+  audit:
+    name: Audit (trivy, uv.lock)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: trivy fs (fails only the weekly run)
+        continue-on-error: ${{ github.event_name != 'schedule' }}  # reports on push/PR; the weekly run fails so GitHub mails
+        run: >-
+          docker run --rm -v "$PWD:/repo:ro" -v "$RUNNER_TEMP:/work" aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb
+          fs --cache-dir /work/trivy --scanners vuln --ignore-unfixed --severity HIGH,CRITICAL
+          --exit-code 1 /repo/uv.lock

@@ -1,6 +1,7 @@
 # Weekly update PRs, one per ecosystem, for releases at least two weeks old.
 # Not covered: tools/convert-requirements.txt (hash-pinned build-time wheels for one
-# platform; update by hand) and the uv version setup-uv installs (`version:` in the workflows).
+# platform; update by hand), the uv version setup-uv installs (`version:` in the workflows)
+# and the python:3.12-slim digest of models.yml's container (keep it the Dockerfile's).
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -23,4 +24,21 @@ updates:
     groups:
       python:
         patterns: ["*"]
+    open-pull-requests-limit: 3
+
+  # The base images, pinned by digest: python, alpine, debian. tests/ for the evaluation image
+  # (Dependabot reads the Dockerfiles of the listed folders only, not their subfolders).
+  - package-ecosystem: docker
+    directories: ["/", "/tests"]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      images:
+        patterns: ["*"]
+    # digests only for python: the paddle wheels are for 3.13, and paddle2onnx needs the 3.12 stage
+    ignore:
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     open-pull-requests-limit: 3
