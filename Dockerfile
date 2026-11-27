@@ -22,7 +22,7 @@ RUN pip wheel --no-deps --no-cache-dir --wheel-dir /wheels /src
 # python-build-standalone release 20261013, CPython 3.13.16; the sha256 values are the release's
 # SHA256SUMS. The runtime comes from the install_only build; the licence texts of its components
 # only ship in the "full" build of the same release, so that is fetched too, for licenses/ alone.
-FROM --platform=$BUILDPLATFORM alpine@sha256:2e0b81d60597f449baa56dc25d355367869d2dca4cd57e866f1e2b52af3eb55f AS python
+FROM --platform=$BUILDPLATFORM alpine@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS python
 ARG TARGETARCH
 # DL3018: apk packages are not pinned by version (only zstd, for unpacking; nothing of it ships).
 # hadolint ignore=DL3018
@@ -63,7 +63,7 @@ RUN set -eu; \
 
 # musl's licence text, from the source release of the version in the Alpine image below (1.2.5;
 # checked against musl's signing key when pinned).
-FROM --platform=$BUILDPLATFORM alpine@sha256:2e0b81d60597f449baa56dc25d355367869d2dca4cd57e866f1e2b52af3eb55f AS musl-licence
+FROM --platform=$BUILDPLATFORM alpine@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS musl-licence
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 RUN wget -q -O /tmp/musl.tgz https://musl.libc.org/releases/musl-1.2.5.tar.gz \
  && echo "a9a118bbe84d8764da0ea0d28b3ab3fae8477fc7e4085d90102b8596fc7c75e4  /tmp/musl.tgz" | sha256sum -c - \
@@ -72,7 +72,7 @@ RUN wget -q -O /tmp/musl.tgz https://musl.libc.org/releases/musl-1.2.5.tar.gz \
  && rm /tmp/musl.tgz
 
 # The target platform's Alpine, for musl's dynamic loader only (no RUN: nothing is executed in it).
-FROM alpine@sha256:2e0b81d60597f449baa56dc25d355367869d2dca4cd57e866f1e2b52af3eb55f AS musl-loader
+FROM alpine@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS musl-loader
 
 # tidyscan itself, the time zone data, the users and the folders.
 FROM --platform=$BUILDPLATFORM python:3.13-slim@sha256:d98cc29d3266e535dd9da1099688d9cb3ca4753813571e071763d17725460962 AS site
