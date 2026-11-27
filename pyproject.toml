@@ -1,5 +1,5 @@
 [build-system]
-requires = ["flit_core==3.12.0"]
+requires = ["flit_core==4.2.0"]
 build-backend = "flit_core.buildapi"
 
 [project]
@@ -40,7 +40,7 @@ include = ["CHANGELOG.md", "tests/", "tools/"]
 [dependency-groups]
 # Lint, type check and the tests that need no Tesseract; `uv sync` installs these.
 # OCRmyPDF here so ty checks the plugin against its API, and its tests run.
-dev = ["ruff==0.17.3", "ty==0.0.95", "Pillow>=10", "ocrmypdf>=16,<18"]
+dev = ["ruff==0.17.5", "ty==0.0.102", "Pillow>=10", "ocrmypdf>=16,<18"]
 
 [tool.ruff]
 line-length = 120
